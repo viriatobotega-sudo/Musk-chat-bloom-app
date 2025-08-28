@@ -8,6 +8,7 @@ import type { UserChat } from "@/types/chat"
 
 export function useUsers() {
   const [users, setUsers] = useState<UserChat[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<UserChat[]>([])
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
@@ -51,24 +52,50 @@ export function useUsers() {
 
     // Listen for users changes
     const unsubscribe = onValue(usersRef, (snapshot) => {
+      console.log("[v0] Firebase snapshot recebido:", snapshot.exists())
+
       const data = snapshot.val()
+      console.log("[v0] Dados do Firebase:", data)
+
       if (data) {
-        const usersList = Object.entries(data).map(([uid, userData]: [string, any]) => ({
-          uid,
-          id: uid, // Adicionando id para compatibilidade
-          displayName: userData.displayName || userData.email?.split("@")[0] || "Usuário",
-          email: userData.email || "",
-          photoURL: userData.photoURL || "",
-          phoneNumber: userData.phoneNumber || "",
-          bio: userData.bio || "",
-          isOnline: userData.isOnline || false,
-          lastSeen: userData.lastSeen || Date.now(),
-        })) as UserChat[]
+        const usersList = Object.entries(data)
+          .map(([uid, userData]: [string, any]) => {
+            if (!userData.displayName && !userData.email) {
+              console.log("[v0] Usuário ignorado por falta de dados básicos:", uid)
+              return null
+            }
+
+            return {
+              uid,
+              id: uid,
+              displayName: userData.displayName || userData.email?.split("@")[0] || "Usuário",
+              email: userData.email || "",
+              photoURL: userData.photoURL || "",
+              phoneNumber: userData.phoneNumber || "",
+              bio: userData.bio || "",
+              isOnline: userData.isOnline || false,
+              lastSeen: userData.lastSeen || Date.now(),
+            }
+          })
+          .filter(Boolean) as UserChat[]
+
+        console.log("[v0] Lista de usuários processada:", usersList.length, "usuários")
+        console.log(
+          "[v0] Usuários encontrados:",
+          usersList.map((u) => u.displayName),
+        )
 
         setUsers(usersList)
+
+        const filtered = usersList.filter((u) => u.uid !== user.uid)
+        setFilteredUsers(filtered)
+        console.log("[v0] Usuários filtrados (excluindo atual):", filtered.length)
+
         setOnlineUsers(usersList.filter((u) => u.isOnline && u.uid !== user.uid).map((u) => u.uid))
       } else {
+        console.log("[v0] Nenhum dado encontrado no Firebase")
         setUsers([])
+        setFilteredUsers([])
         setOnlineUsers([])
       }
       setLoading(false)
@@ -85,19 +112,25 @@ export function useUsers() {
   }, [user])
 
   const searchUsers = (query: string) => {
-    if (!query.trim()) return users.filter((u) => u.uid !== user?.uid)
+    console.log("[v0] Usuários disponíveis para busca:", filteredUsers.length)
 
-    return users.filter(
+    if (!query.trim()) return filteredUsers
+
+    const searchResults = filteredUsers.filter(
       (u) =>
-        u.uid !== user?.uid &&
-        ((u.displayName || "").toLowerCase().includes(query.toLowerCase()) ||
-          (u.email || "").toLowerCase().includes(query.toLowerCase()) ||
-          (u.phoneNumber || "").includes(query)),
+        (u.displayName || "").toLowerCase().includes(query.toLowerCase()) ||
+        (u.email || "").toLowerCase().includes(query.toLowerCase()) ||
+        (u.phoneNumber || "").includes(query),
     )
+
+    console.log("[v0] Resultados da busca para '", query, "':", searchResults.length)
+    return searchResults
   }
 
+  console.log("[v0] Hook useUsers retornando:", filteredUsers.length, "usuários")
+
   return {
-    users: users.filter((u) => u.uid !== user?.uid),
+    users: filteredUsers,
     onlineUsers,
     loading,
     searchUsers,

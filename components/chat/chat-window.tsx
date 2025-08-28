@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Phone, Video, MoreVertical } from "lucide-react"
+import { ArrowLeft, User, MoreVertical } from "lucide-react"
 import { MessageBubble } from "./message-bubble"
 import { MessageInput } from "./message-input"
 import { TypingIndicator } from "./typing-indicator"
+import { FriendProfile } from "@/components/users/friend-profile"
 import { useChat } from "@/hooks/use-chat"
 import type { UserChat } from "@/types/chat"
 
@@ -20,6 +21,7 @@ interface ChatWindowProps {
 export function ChatWindow({ chatId, otherUser, onBack }: ChatWindowProps) {
   const { messages, loading, typingUsers, sendMessage, setTyping } = useChat(chatId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [showFriendProfile, setShowFriendProfile] = useState(false)
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -69,7 +71,9 @@ export function ChatWindow({ chatId, otherUser, onBack }: ChatWindowProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium truncate">{otherUser.displayName}</h3>
+            <button onClick={() => setShowFriendProfile(true)} className="text-left hover:underline focus:outline-none">
+              <h3 className="font-medium truncate">{otherUser.displayName}</h3>
+            </button>
             <p className="text-sm text-muted-foreground">
               {otherUser.isOnline ? (
                 <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
@@ -82,12 +86,6 @@ export function ChatWindow({ chatId, otherUser, onBack }: ChatWindowProps) {
           </div>
 
           <div className="flex space-x-2">
-            <Button size="sm" variant="ghost">
-              <Phone className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="ghost">
-              <Video className="w-4 h-4" />
-            </Button>
             <Button size="sm" variant="ghost">
               <MoreVertical className="w-4 h-4" />
             </Button>
@@ -113,6 +111,18 @@ export function ChatWindow({ chatId, otherUser, onBack }: ChatWindowProps) {
 
       {/* Message Input */}
       <MessageInput onSendMessage={sendMessage} onTyping={setTyping} />
+
+      {/* Friend Profile Modal */}
+      {showFriendProfile && (
+        <FriendProfile
+          user={otherUser}
+          onClose={() => setShowFriendProfile(false)}
+          onStartChat={() => {
+            setShowFriendProfile(false)
+            // Already in chat, no need to start new one
+          }}
+        />
+      )}
     </div>
   )
 }

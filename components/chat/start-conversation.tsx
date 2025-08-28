@@ -23,6 +23,9 @@ export function StartConversation({ onStartChat }: StartConversationProps) {
   const { user } = useAuth()
   const { createOrGetIndividualChat } = useChatRooms()
 
+  console.log("[v0] StartConversation - usuários recebidos:", users.length)
+  console.log("[v0] StartConversation - loading:", loading)
+
   const filteredUsers = users.filter(
     (u) =>
       u.uid !== user?.uid &&
@@ -31,6 +34,8 @@ export function StartConversation({ onStartChat }: StartConversationProps) {
         (u.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (u.phoneNumber || "").includes(searchTerm)),
   )
+
+  console.log("[v0] StartConversation - usuários filtrados:", filteredUsers.length)
 
   const handleStartChat = async (targetUserId: string) => {
     if (!user) return
@@ -93,8 +98,13 @@ export function StartConversation({ onStartChat }: StartConversationProps) {
               ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>{searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}</p>
-                  {!searchTerm && <p className="text-xs mt-1">Aguarde outros usuários se cadastrarem</p>}
+                  <p>{searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado ainda"}</p>
+                  {!searchTerm && (
+                    <div className="text-xs mt-2 space-y-1">
+                      <p>Seja o primeiro a convidar amigos!</p>
+                      <p>Total de usuários no sistema: {users.length}</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 filteredUsers.map((targetUser) => {

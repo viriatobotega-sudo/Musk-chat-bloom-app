@@ -93,6 +93,9 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
               Não tem uma conta? Registre-se
             </Button>
           </div>
+          <div className="mt-6 text-center">
+            <p className="text-xs text-muted-foreground">Criado pelo Ellon Musk dev</p>
+          </div>
         </CardContent>
       </Card>
     </div>
