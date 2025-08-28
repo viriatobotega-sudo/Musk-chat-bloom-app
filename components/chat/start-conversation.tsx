@@ -13,30 +13,40 @@ import { Badge } from "@/components/ui/badge"
 import { MessageCircle, Search, Users } from "lucide-react"
 
 interface StartConversationProps {
-  onStartChat: (userId: string) => void
+  onStartChat: (chatRoomId: string) => void
 }
 
 export function StartConversation({ onStartChat }: StartConversationProps) {
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const { users, onlineUsers } = useUsers()
+  const { users, onlineUsers, loading } = useUsers()
   const { user } = useAuth()
-  const { createChatRoom } = useChatRooms()
+  const { createOrGetIndividualChat } = useChatRooms()
 
   const filteredUsers = users.filter(
     (u) =>
-      u.id !== user?.uid &&
-      (u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.phoneNumber?.includes(searchTerm)),
+      u.uid !== user?.uid &&
+      (searchTerm === "" ||
+        (u.displayName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.phoneNumber || "").includes(searchTerm)),
   )
 
   const handleStartChat = async (targetUserId: string) => {
     if (!user) return
 
     try {
-      await createChatRoom(targetUserId, "individual")
-      onStartChat(targetUserId)
+      const targetUser = users.find((u) => u.uid === targetUserId)
+      if (!targetUser) {
+        console.error("Usuário alvo não encontrado")
+        return
+      }
+
+      console.log("[v0] Iniciando conversa com:", targetUser.displayName || targetUser.email)
+      const chatRoomId = await createOrGetIndividualChat(targetUser)
+      console.log("[v0] Chat room criado/encontrado:", chatRoomId)
+
+      onStartChat(chatRoomId)
       setOpen(false)
       setSearchTerm("")
     } catch (error) {
@@ -75,26 +85,32 @@ export function StartConversation({ onStartChat }: StartConversationProps) {
 
           <ScrollArea className="h-80">
             <div className="space-y-2">
-              {filteredUsers.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p>Carregando usuários...</p>
+                </div>
+              ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum usuário encontrado</p>
+                  <p>{searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}</p>
+                  {!searchTerm && <p className="text-xs mt-1">Aguarde outros usuários se cadastrarem</p>}
                 </div>
               ) : (
                 filteredUsers.map((targetUser) => {
-                  const isOnline = onlineUsers.includes(targetUser.id)
+                  const isOnline = onlineUsers.includes(targetUser.uid)
 
                   return (
                     <div
-                      key={targetUser.id}
+                      key={targetUser.uid}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                      onClick={() => handleStartChat(targetUser.id)}
+                      onClick={() => handleStartChat(targetUser.uid)}
                     >
                       <div className="relative">
                         <Avatar className="w-12 h-12">
                           <AvatarImage src={targetUser.photoURL || ""} />
                           <AvatarFallback>
-                            {targetUser.displayName?.charAt(0) || targetUser.email?.charAt(0) || "U"}
+                            {(targetUser.displayName || targetUser.email || "U").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         {isOnline && (

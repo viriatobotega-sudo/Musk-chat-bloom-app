@@ -1,5 +1,6 @@
 export interface UserChat {
   uid: string
+  id: string // Adicionando campo id para compatibilidade com componentes
   email: string
   displayName: string
   phoneNumber?: string
@@ -7,7 +8,7 @@ export interface UserChat {
   bio?: string
   isOnline: boolean
   lastSeen: number
-  createdAt: number
+  createdAt?: number
 }
 
 export interface ChatMessage {

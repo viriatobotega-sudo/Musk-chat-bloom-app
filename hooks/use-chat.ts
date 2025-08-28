@@ -89,9 +89,15 @@ export function useChat(chatId: string | null) {
         senderPhoto: user.photoURL,
         content: content.trim(),
         type,
-        fileUrl,
-        fileName,
         timestamp: Date.now(),
+      }
+
+      // Only add fileUrl and fileName if they have values
+      if (fileUrl) {
+        message.fileUrl = fileUrl
+      }
+      if (fileName) {
+        message.fileName = fileName
       }
 
       try {

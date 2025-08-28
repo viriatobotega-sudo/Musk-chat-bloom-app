@@ -24,10 +24,11 @@ import { useUnreadCount } from "@/hooks/use-unread-count"
 import type { UserChat, ChatRoom } from "@/types/chat"
 import { OfflineIndicator } from "@/components/layout/offline-indicator"
 import { MessageSearch } from "@/components/search/message-search"
+import { FriendProfile } from "@/components/users/friend-profile"
 
 export default function HomePage() {
   const { user, loading, logout } = useAuth()
-  const { createOrGetIndividualChat } = useChatRooms()
+  const { createOrGetIndividualChat, chatRooms } = useChatRooms()
   const { users } = useUsers()
   const { unreadCount } = useUnreadCount()
   const [authMode, setAuthMode] = useState<"login" | "register">("login")
@@ -41,6 +42,9 @@ export default function HomePage() {
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showGroupManagement, setShowGroupManagement] = useState<ChatRoom | null>(null)
   const [showMessageSearch, setShowMessageSearch] = useState(false)
+  const [showFriendProfile, setShowFriendProfile] = useState<string | null>(null)
+
+  const hasChats = chatRooms.length > 0
 
   const handleStartChat = async (otherUser: UserChat) => {
     try {
@@ -147,6 +151,17 @@ export default function HomePage() {
             <h1 className="text-xl font-bold">ChatBloom</h1>
           </div>
           <div className="flex items-center space-x-2">
+            {activeChatId && selectedUser && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowFriendProfile(selectedUser.uid)}
+                className="hidden md:flex"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Ver Perfil
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setShowProfile(true)} className="hidden md:flex">
               <User className="w-4 h-4" />
             </Button>
@@ -164,7 +179,21 @@ export default function HomePage() {
       <div className="flex h-[calc(100vh-73px-4rem)] md:h-[calc(100vh-73px)]">
         {/* Sidebar */}
         <div className={`w-full md:w-80 border-r bg-card ${activeChatId ? "hidden md:block" : ""}`}>
-          {showMessageSearch ? (
+          {showFriendProfile ? (
+            <div className="p-4 h-full overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Perfil do Amigo</h2>
+                <Button size="sm" variant="ghost" onClick={() => setShowFriendProfile(null)}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </div>
+              <FriendProfile
+                userId={showFriendProfile}
+                onClose={() => setShowFriendProfile(null)}
+                onStartChat={handleStartChat}
+              />
+            </div>
+          ) : showMessageSearch ? (
             <div className="p-4 h-full overflow-y-auto">
               <MessageSearch
                 onClose={() => setShowMessageSearch(false)}
@@ -278,6 +307,7 @@ export default function HomePage() {
                 setSelectedUser(null)
                 setSelectedGroup(null)
               }}
+              onViewProfile={() => selectedUser && setShowFriendProfile(selectedUser.uid)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-center p-8">
@@ -293,7 +323,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <StartConversation onStartChat={handleStartChatById} />
+      {activeTab === "conversations" && !activeChatId && <StartConversation onStartChat={handleStartChatById} />}
 
       {/* Bottom Navigation - Mobile Only */}
       <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />

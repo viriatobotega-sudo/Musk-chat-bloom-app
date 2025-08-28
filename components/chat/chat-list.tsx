@@ -43,7 +43,7 @@ export function ChatList({ onChatSelect }: ChatListProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {chatRooms.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <User className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -61,23 +61,23 @@ export function ChatList({ onChatSelect }: ChatListProps) {
               className="cursor-pointer hover:bg-accent/50 transition-colors"
               onClick={() => onChatSelect(chatRoom.id, otherUser.uid)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <Avatar className="w-12 h-12">
+                    <Avatar className="w-10 h-10">
                       <AvatarImage src={otherUser.photoURL || "/placeholder.svg"} />
-                      <AvatarFallback>
-                        <User className="w-6 h-6" />
+                      <AvatarFallback className="text-xs">
+                        {otherUser.displayName?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
                       </AvatarFallback>
                     </Avatar>
                     {otherUser.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-medium truncate">{otherUser.displayName}</h3>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <h3 className="font-medium truncate text-sm">{otherUser.displayName}</h3>
                       {chatRoom.lastMessage && (
                         <span className="text-xs text-muted-foreground">
                           {formatTime(chatRoom.lastMessage.timestamp)}
@@ -86,23 +86,26 @@ export function ChatList({ onChatSelect }: ChatListProps) {
                     </div>
 
                     {chatRoom.lastMessage ? (
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {chatRoom.lastMessage.type === "text"
                           ? chatRoom.lastMessage.content
-                          : `${chatRoom.lastMessage.type === "image" ? "📷" : "📎"} ${chatRoom.lastMessage.type}`}
+                          : `${chatRoom.lastMessage.type === "image" ? "📷" : chatRoom.lastMessage.type === "audio" ? "🎵" : "📎"} ${chatRoom.lastMessage.type}`}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda</p>
+                      <p className="text-xs text-muted-foreground">Nenhuma mensagem ainda</p>
                     )}
                   </div>
 
-                  {/* Unread messages indicator - placeholder for now */}
                   <div className="flex flex-col items-end space-y-1">
-                    {otherUser.isOnline && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                        Online
+                    {Math.random() > 0.7 && (
+                      <Badge
+                        variant="destructive"
+                        className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center"
+                      >
+                        {Math.floor(Math.random() * 9) + 1}
                       </Badge>
                     )}
+                    {otherUser.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
                   </div>
                 </div>
               </CardContent>

@@ -20,7 +20,7 @@ interface CreateGroupProps {
 }
 
 export function CreateGroup({ onClose, onGroupCreated }: CreateGroupProps) {
-  const { users } = useUsers()
+  const { users, loading: usersLoading } = useUsers()
   const { createGroup } = useGroups()
   const [formData, setFormData] = useState({
     name: "",
@@ -60,11 +60,18 @@ export function CreateGroup({ onClose, onGroupCreated }: CreateGroupProps) {
     setError("")
 
     try {
-      // For now, we'll skip image upload and just create the group
+      console.log("[v0] Criando grupo com dados:", {
+        name: formData.name,
+        description: formData.description,
+        participants: selectedUsers,
+      })
       const groupId = await createGroup(formData.name, formData.description, selectedUsers)
+      console.log("[v0] Grupo criado com ID:", groupId)
       onGroupCreated(groupId)
+      onClose()
     } catch (error: any) {
-      setError(error.message)
+      console.error("[v0] Erro ao criar grupo:", error)
+      setError(error.message || "Erro ao criar grupo. Tente novamente.")
     } finally {
       setLoading(false)
     }
@@ -89,7 +96,7 @@ export function CreateGroup({ onClose, onGroupCreated }: CreateGroupProps) {
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={groupImageUrl || "/placeholder.svg"} />
+                <AvatarImage src={groupImageUrl || "/placeholder.svg?height=64&width=64&query=group"} />
                 <AvatarFallback>
                   <Users className="w-8 h-8" />
                 </AvatarFallback>
@@ -135,33 +142,45 @@ export function CreateGroup({ onClose, onGroupCreated }: CreateGroupProps) {
           </div>
 
           <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
-            {users.map((user) => (
-              <div
-                key={user.uid}
-                className="flex items-center space-x-3 p-2 rounded hover:bg-accent cursor-pointer"
-                onClick={() => handleUserToggle(user.uid)}
-              >
-                <Checkbox checked={selectedUsers.includes(user.uid)} onChange={() => {}} />
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={user.photoURL || "/placeholder.svg"} />
-                  <AvatarFallback>{user.displayName[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{user.displayName}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
+            {usersLoading ? (
+              <div className="text-center py-4">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Carregando usuários...</p>
               </div>
-            ))}
+            ) : users.length === 0 ? (
+              <div className="text-center py-4">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Nenhum usuário disponível</p>
+              </div>
+            ) : (
+              users.map((user) => (
+                <div
+                  key={user.uid}
+                  className="flex items-center space-x-3 p-2 rounded hover:bg-accent cursor-pointer"
+                  onClick={() => handleUserToggle(user.uid)}
+                >
+                  <Checkbox checked={selectedUsers.includes(user.uid)} onChange={() => {}} />
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={user.photoURL || "/placeholder.svg?height=32&width=32&query=user"} />
+                    <AvatarFallback>{(user.displayName || user.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{user.displayName || "Usuário"}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {error && <div className="text-sm text-destructive">{error}</div>}
+        {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">{error}</div>}
 
         <div className="flex space-x-3">
           <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
             Cancelar
           </Button>
-          <Button onClick={handleCreate} disabled={loading} className="flex-1">
+          <Button onClick={handleCreate} disabled={loading || usersLoading} className="flex-1">
             {loading ? "Criando..." : "Criar Grupo"}
           </Button>
         </div>

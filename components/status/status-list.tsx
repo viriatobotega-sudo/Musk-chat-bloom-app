@@ -3,10 +3,14 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useUsers } from "@/hooks/use-users"
+import { ref, push, onValue, off } from "firebase/database"
+import { database } from "@/lib/firebase"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, Eye } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Plus, Eye, Send } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -25,29 +29,57 @@ export function StatusList() {
   const { users } = useUsers()
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([])
   const [myStatus, setMyStatus] = useState<StatusUpdate[]>([])
+  const [showCreateStatus, setShowCreateStatus] = useState(false)
+  const [newStatusContent, setNewStatusContent] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  // Mock data for demonstration
   useEffect(() => {
-    const mockStatuses: StatusUpdate[] = [
-      {
-        id: "1",
-        userId: "user1",
-        content: "Trabalhando em um novo projeto!",
-        timestamp: Date.now() - 3600000, // 1 hour ago
+    if (!user) return
+
+    const statusRef = ref(database, "status")
+    const unsubscribe = onValue(statusRef, (snapshot) => {
+      const data = snapshot.val()
+      if (data) {
+        const statusList = Object.entries(data).map(([id, status]: [string, any]) => ({
+          id,
+          ...status,
+        })) as StatusUpdate[]
+
+        // Filter status from last 24 hours
+        const recentStatus = statusList.filter((status) => Date.now() - status.timestamp < 24 * 60 * 60 * 1000)
+
+        setStatusUpdates(recentStatus.filter((s) => s.userId !== user.uid))
+        setMyStatus(recentStatus.filter((s) => s.userId === user.uid))
+      } else {
+        setStatusUpdates([])
+        setMyStatus([])
+      }
+    })
+
+    return () => off(statusRef, "value", unsubscribe)
+  }, [user])
+
+  const createStatus = async () => {
+    if (!user || !newStatusContent.trim()) return
+
+    setLoading(true)
+    try {
+      const statusRef = ref(database, "status")
+      await push(statusRef, {
+        userId: user.uid,
+        content: newStatusContent.trim(),
+        timestamp: Date.now(),
         views: [],
-      },
-      {
-        id: "2",
-        userId: "user2",
-        content: "Bom dia pessoal!",
-        mediaUrl: "/vibrant-mountain-sunrise.png",
-        mediaType: "image",
-        timestamp: Date.now() - 7200000, // 2 hours ago
-        views: [],
-      },
-    ]
-    setStatusUpdates(mockStatuses)
-  }, [])
+      })
+
+      setNewStatusContent("")
+      setShowCreateStatus(false)
+    } catch (error) {
+      console.error("Erro ao criar status:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getUserById = (userId: string) => {
     return users.find((u) => u.uid === userId)
@@ -64,14 +96,38 @@ export function StatusList() {
                 <AvatarImage src={user?.photoURL || ""} />
                 <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}</AvatarFallback>
               </Avatar>
-              <Button size="sm" className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full p-0">
-                <Plus className="w-3 h-3" />
-              </Button>
+              <Dialog open={showCreateStatus} onOpenChange={setShowCreateStatus}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full p-0">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Status</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="O que está acontecendo?"
+                      value={newStatusContent}
+                      onChange={(e) => setNewStatusContent(e.target.value)}
+                      maxLength={280}
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">{newStatusContent.length}/280</span>
+                      <Button onClick={createStatus} disabled={loading || !newStatusContent.trim()}>
+                        <Send className="w-4 h-4 mr-2" />
+                        {loading ? "Postando..." : "Postar"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             <div className="flex-1">
               <p className="font-medium">Meu status</p>
               <p className="text-sm text-muted-foreground">
-                {myStatus.length > 0 ? "Toque para ver" : "Toque para adicionar"}
+                {myStatus.length > 0 ? `${myStatus.length} atualizações` : "Toque para adicionar"}
               </p>
             </div>
           </div>
@@ -113,9 +169,7 @@ export function StatusList() {
                         <span className="text-sm text-muted-foreground">{status.views.length}</span>
                       </div>
                     </div>
-                    {status.content && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{status.content}</p>
-                    )}
+                    {status.content && <p className="mt-2 text-sm">{status.content}</p>}
                   </CardContent>
                 </Card>
               )

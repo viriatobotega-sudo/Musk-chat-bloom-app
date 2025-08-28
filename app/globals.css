@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -121,5 +121,26 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Adicionando estilos para garantir que a navegação inferior fique sempre fixa */
+  .bottom-nav-fixed {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 50 !important;
+  }
+
+  /* Garantir que o conteúdo não seja coberto pela navegação */
+  .content-with-bottom-nav {
+    padding-bottom: 4rem; /* 64px para a altura da navegação */
+  }
+
+  /* Suporte para safe area em dispositivos móveis */
+  @supports (padding: max(0px)) {
+    .bottom-nav-fixed {
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
   }
 }
